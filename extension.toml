@@ -1,0 +1,7 @@
+id = "mpls"
+name = "MPLS"
+version = "0.1.0"
+schema_version = 1
+authors = ["pnyda <135603985+pnyda@users.noreply.github.com>"]
+description = "Zed extension for MPLS language server"
+repository = "https://github.com/pnyda/zed-mpls"
