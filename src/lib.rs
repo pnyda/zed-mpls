@@ -58,9 +58,17 @@ impl Mpls {
     };
     let archived_asset_name = format!(
       "mpls_{}_{}_{}.{}",
-      release.version, os_str, arch_str, file_type_str
+      &release.version[1..], // v0.16.0 -> 0.16.0
+      os_str,
+      arch_str,
+      file_type_str
     );
-    let unarchived_asset_name = format!("mpls_{}_{}_{}", release.version, os_str, arch_str);
+    let unarchived_asset_name = format!(
+      "mpls_{}_{}_{}",
+      &release.version[1..], // v0.16.0 -> 0.16.0
+      os_str,
+      arch_str
+    );
     let executable_name = format!("{}/{}", unarchived_asset_name, "mpls");
     if let Ok(true) = fs::exists(&executable_name) {
       // The language server is already downloaded.
