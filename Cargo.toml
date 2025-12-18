@@ -7,4 +7,5 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+regex = "1.12.2"
 zed_extension_api = "0.7.0"
