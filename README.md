@@ -1,3 +1,3 @@
 # zed-mpls
 
-Zed extension for MPLS language server
+Zed extension for [Markdown Preview Language Server](https://github.com/mhersson/mpls).
