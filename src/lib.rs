@@ -1,6 +1,6 @@
 use regex::Regex;
-use std::{env::current_dir, fs};
-use zed_extension_api::{self as zed, GithubRelease};
+use std::{collections::HashMap, env::current_dir, fs};
+use zed_extension_api::{self as zed, GithubRelease, settings::LspSettings};
 
 fn platform() -> zed::Result<(&'static str, &'static str)> {
   let (os, arch) = zed::current_platform();
@@ -172,20 +172,51 @@ impl zed::Extension for Mpls {
     language_server_id: &zed::LanguageServerId,
     worktree: &zed::Worktree,
   ) -> zed::Result<zed::Command> {
-    if let Err(err) = self.find_language_server(language_server_id, worktree) {
-      zed::set_language_server_installation_status(
-        language_server_id,
-        &zed::LanguageServerInstallationStatus::Failed(err.to_string()),
-      );
-      return Err(err);
-    } else {
-      zed::set_language_server_installation_status(
-        language_server_id,
-        &zed::LanguageServerInstallationStatus::None,
-      );
-    }
+    let settings = LspSettings::for_worktree("mpls", worktree).ok();
+    let settings = settings
+      .as_ref()
+      .and_then(|settings| settings.binary.as_ref());
 
-    Ok(zed::Command::new(self.language_server_path.as_ref().expect("This shouldn't happen. self.install_language_server() is supposed to make self.language_server_path not None")).arg("--enable-emoji").arg("--enable-wikilinks").arg("--enable-footnotes"))
+    let command =
+      if let Some(executable_path) = settings.as_ref().and_then(|binary| binary.path.as_ref()) {
+        executable_path
+      } else {
+        if let Err(err) = self.find_language_server(language_server_id, worktree) {
+          zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::Failed(err.to_string()),
+          );
+          return Err(err);
+        } else {
+          zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::None,
+          );
+        }
+
+        self
+          .language_server_path
+          .as_ref()
+          .ok_or("Can't download language server & Can't find existing installation".to_string())?
+      };
+
+    let default_args = vec![
+      "--enable-emoji".to_string(),
+      "--enable-wikilinks".to_string(),
+      "--enable-footnotes".to_string(),
+    ];
+    let args = settings
+      .as_ref()
+      .and_then(|binary| binary.arguments.as_ref())
+      .unwrap_or(&default_args);
+
+    let default_env: HashMap<_, _> = worktree.shell_env().into_iter().collect();
+    let env = settings
+      .as_ref()
+      .and_then(|binary| binary.env.as_ref())
+      .unwrap_or(&default_env);
+
+    Ok(zed::Command::new(command).args(args).envs(env))
   }
 }
 
