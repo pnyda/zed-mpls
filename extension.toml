@@ -1,6 +1,6 @@
 id = "mpls"
 name = "MPLS"
-version = "0.1.0"
+version = "0.2.0"
 schema_version = 1
 authors = ["pnyda <135603985+pnyda@users.noreply.github.com>"]
 description = "Zed extension for Markdown Preview Language Server"
