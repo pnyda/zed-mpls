@@ -50,13 +50,23 @@ impl Mpls {
         pre_release: false,
       },
     );
-    if let Ok(release) = release {
-      // If we have internet connection
-      self.when_online(&release, language_server_id)
-    } else {
-      // If we don't
-      self.when_offline()
+
+    let result = release
+      .and_then(|release| self.when_online(&release, language_server_id))
+      .or_else(|_| self.when_offline());
+
+    match result.as_ref() {
+      Ok(_) => zed::set_language_server_installation_status(
+        language_server_id,
+        &zed::LanguageServerInstallationStatus::None,
+      ),
+      Err(err) => zed::set_language_server_installation_status(
+        language_server_id,
+        &zed::LanguageServerInstallationStatus::Failed(err.to_string()),
+      ),
     }
+
+    result
   }
 
   fn when_online(
@@ -177,28 +187,17 @@ impl zed::Extension for Mpls {
       .as_ref()
       .and_then(|settings| settings.binary.as_ref());
 
-    let command =
-      if let Some(executable_path) = settings.as_ref().and_then(|binary| binary.path.as_ref()) {
-        executable_path
-      } else {
-        if let Err(err) = self.find_language_server(language_server_id, worktree) {
-          zed::set_language_server_installation_status(
-            language_server_id,
-            &zed::LanguageServerInstallationStatus::Failed(err.to_string()),
-          );
-          return Err(err);
-        } else {
-          zed::set_language_server_installation_status(
-            language_server_id,
-            &zed::LanguageServerInstallationStatus::None,
-          );
-        }
-
-        self
-          .language_server_path
-          .as_ref()
-          .ok_or("Can't download language server & Can't find existing installation".to_string())?
-      };
+    let command = if let Some(executable_path) =
+      settings.as_ref().and_then(|binary| binary.path.as_ref())
+    {
+      executable_path
+    } else {
+      self.find_language_server(language_server_id, worktree)?;
+      self
+        .language_server_path
+        .as_ref()
+        .expect("This shouldn't happen. self.find_language_server is supposed to make self.language_server_path not None.")
+    };
 
     let default_args = vec![
       "--enable-emoji".to_string(),
